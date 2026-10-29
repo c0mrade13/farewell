@@ -354,6 +354,10 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 
 <script src="notes.js"></script>
 <script>
+  // Review mode for the author: only on this computer's preview, never on the live site
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.write('<script src="/review-keys.js"><\/script>');
+</script>
+<script>
 (() => {
   const F = window.FAREWELL;
   const $ = (s) => document.querySelector(s);
@@ -383,7 +387,8 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
-  const keyOf = (slug) => store.get("fw-key-" + slug);
+  const REVIEW = window.REVIEW_KEYS || null;
+  const keyOf = (slug) => (REVIEW && REVIEW[slug]) || store.get("fw-key-" + slug);
   const isOpened = (slug) => store.get("fw-open-" + slug) === "1";
 
   /* Personal link: #slug.code -> remember the key, then clean the address bar */
@@ -398,7 +403,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
       history.replaceState(null, "", location.pathname + location.search);
     }
   }
-  if (!mineSlug) mineSlug = (F.notes.find((n) => keyOf(n.slug)) || {}).slug || null;
+  if (!mineSlug && !REVIEW) mineSlug = (F.notes.find((n) => keyOf(n.slug)) || {}).slug || null;
   const mine = F.notes.find((n) => n.slug === mineSlug);
 
   /* Crypto */
@@ -442,7 +447,12 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   /* Cards */
   const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   const initials = (n) => n.replace(/[^\p{L}\s]/gu, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "♥";
-  function chipText(n) { return n.slug === mineSlug ? "Your note" : isOpened(n.slug) ? "Opened" : "Sealed"; }
+  function chipText(n) { return n.slug === mineSlug ? "Your note" : REVIEW ? "Review" : isOpened(n.slug) ? "Opened" : "Sealed"; }
+  if (REVIEW) {
+    const b = $("#mine-banner");
+    b.append(el("p", null, "Review mode: every note is unsealed on this computer only. Your colleagues still need their codes."));
+    b.hidden = false;
+  }
   const cards = new Map();
   F.notes.forEach((n, i) => {
     const c = el("button", "card reveal" + (n.slug === mineSlug ? " mine" : "") + (isOpened(n.slug) ? " opened" : ""));
@@ -530,7 +540,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   }
 
   function showLetter(n, data, token) {
-    frame(`Dear ${n.name},`);
+    frame(`Dear ${data.dear || n.name},`);
     const msg = el("p", "msg"); msg.title = "Tap to show the whole note";
     L.append(msg);
     if (n.photos) {
