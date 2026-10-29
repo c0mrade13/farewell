@@ -27,6 +27,10 @@
   --paper-line: #e3e7ee;
   --paper-muted: #66707e;
   --error: #b3261e;
+  --egg-bg: #12151f;
+  --egg-ink: #eef6ee;
+  --egg-muted: #a9b4ad;
+  --egg-accent: #7cff6b;
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
   --font-hand: "Caveat", "Segoe Print", "Comic Sans MS", cursive;
@@ -244,6 +248,21 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 .polaroid img { display: block; width: 100%; max-height: 360px; object-fit: cover; border-radius: 2px; background: #eee; }
 .photos.n1 .polaroid { width: min(100%, 420px); }
 .photos.n2 .polaroid, .photos.n3 .polaroid { width: min(100%, 240px); }
+
+/* Easter egg: COD challenge */
+.egg {
+  position: relative; display: grid; gap: 12px; padding: 18px; border-radius: 14px; overflow: hidden;
+  background: var(--egg-bg); color: var(--egg-ink); font-family: var(--font-body);
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.35);
+}
+.egg-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--egg-accent); }
+.egg-title { margin: 0; font-family: var(--font-display); font-weight: 800; font-size: 1.35rem; line-height: 1.15; }
+.egg-status { margin: 0; font-size: 15px; min-height: 1.4em; color: var(--egg-muted); }
+.egg-actions { position: relative; display: flex; flex-wrap: wrap; gap: 10px; min-height: 104px; align-items: flex-start; }
+.egg .btn { color: var(--egg-ink); border-color: rgba(255, 255, 255, 0.35); }
+.egg .btn.accept { background: var(--egg-accent); border-color: var(--egg-accent); color: #0b1a0a; }
+.egg .btn.dodge { transition: transform 0.25s cubic-bezier(.3, 1.6, .5, 1); }
+.egg.won { box-shadow: inset 0 0 0 2px var(--egg-accent); }
 
 /* Slam book */
 .slam { color: var(--ink-night); padding-block: 40px 40px; }
@@ -550,7 +569,9 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
       loadPhotos(n, token, ph);
     }
     if (data.memory) { const m = el("div", "memory"); m.append(el("b", null, "Remember when…"), data.memory); L.append(m); }
+    if (data.egg === "cod") L.append(codChallenge(n));
     L.append(el("p", "sign", `— ${F.from}`));
+    notify(`opened-${n.slug}`, `💛 ${n.name} opened your note`, `${n.name} just opened the farewell note you wrote for them.`);
     const act = el("div", "letter-actions");
     act.append(el("p", "hint", reduceMotion ? "" : "Tap the note to skip the typing."));
     const btns = el("div", "slam-actions");
@@ -575,6 +596,46 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     if (!k) return showUnlock(n);
     try { showLetter(n, await decryptNote(n, k), k); }
     catch (e) { store.del("fw-key-" + n.slug); showUnlock(n, "The saved code didn't work. Enter the code from your link."); }
+  }
+
+  /* Email Ashokan once per device when something happens (uses the slam book's Web3Forms key) */
+  function notify(id, subject, message) {
+    const key = (F.slam || {}).key;
+    if (!key || REVIEW || store.get("fw-sent-" + id)) return;
+    store.set("fw-sent-" + id, "1");
+    fetch("https://api.web3forms.com/submit", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ access_key: key, subject, from_name: "Farewell site", message }),
+    }).then((r) => { if (!r.ok) store.del("fw-sent-" + id); }, () => store.del("fw-sent-" + id));
+  }
+
+  /* Salmaan's Easter egg: the 1v1 COD Mobile challenge he keeps dodging */
+  function codChallenge(n) {
+    const box = el("div", "egg");
+    box.append(el("span", "egg-tag", "Pending since forever"), el("h3", "egg-title", "🎮 1v1 COD Mobile challenge"));
+    const status = el("p", "egg-status", `Challenger: ${F.from}. Opponent: ${n.name}. Status: dodged. Every. Single. Time.`);
+    const acts = el("div", "egg-actions");
+    const accept = el("button", "btn accept", "Accept challenge"); accept.type = "button";
+    const dodge = el("button", "btn dodge", "Dodge again"); dodge.type = "button";
+    const dodgeLines = ["Still dodging?", "Scared? 😏", "Your gamer card is shaking", "Running out of excuses…"];
+    let dodges = 0, armed = false;
+    dodge.addEventListener("click", () => {
+      const w = Math.max(0, acts.clientWidth - dodge.offsetWidth - 150), x = Math.round(Math.random() * w), y = Math.round(Math.random() * 56);
+      dodge.style.transform = `translate(${x}px, ${y}px) rotate(${(Math.random() - 0.5) * 16}deg)`;
+      if (dodges < dodgeLines.length) dodge.textContent = dodgeLines[dodges];
+      dodges++;
+      if (dodges > dodgeLines.length) { dodge.remove(); status.textContent = "The dodge button gave up. Only one option left 😄"; }
+    });
+    accept.addEventListener("click", () => {
+      if (!armed) { armed = true; accept.textContent = "Yes, I'm sure 🔥"; status.textContent = "Real gamers don't back out. Tap again to lock it in."; return; }
+      box.classList.add("won"); dodge.remove(); accept.remove();
+      status.textContent = `Challenge accepted! ${F.from} has been notified. No backing out now. See you in the lobby 🎯`;
+      burst();
+      notify(`cod-${n.slug}`, `🎮 ${n.name} accepted the 1v1 COD challenge!`, `${n.name} finally accepted your 1v1 COD Mobile challenge on the farewell site. Time to set up the match.`);
+    });
+    acts.append(accept, dodge);
+    box.append(status, acts);
+    return box;
   }
 
   async function loadPhotos(n, token, box) {
