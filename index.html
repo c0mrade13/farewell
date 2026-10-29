@@ -263,6 +263,46 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 .egg .btn.accept { background: var(--egg-accent); border-color: var(--egg-accent); color: #0b1a0a; }
 .egg .btn.dodge { transition: transform 0.25s cubic-bezier(.3, 1.6, .5, 1); }
 .egg.won { box-shadow: inset 0 0 0 2px var(--egg-accent); }
+.egg .btn.go { background: var(--egg-accent); border-color: var(--egg-accent); color: #10140f; }
+.egg .btn:disabled { opacity: 0.6; cursor: default; transform: none; }
+.egg-stage { position: relative; height: 64px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.egg-stage .actor { position: absolute; top: 50%; font-size: 34px; line-height: 1; transform: translateY(-50%); }
+.road::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 3px dashed rgba(255, 255, 255, 0.25); }
+.road .actor { left: -12%; z-index: 1; }
+.road.drive .actor { animation: drive 2.6s cubic-bezier(.4, 0, .6, 1) forwards; }
+@keyframes drive { to { left: 104%; } }
+.pack .actor.bear { left: 14%; }
+.pack .actor.case { right: 14%; font-size: 40px; }
+.pack.go .actor.bear { animation: hop 1.2s cubic-bezier(.3, 0, .4, 1) forwards; }
+@keyframes hop { 50% { left: 45%; top: 0%; } 100% { left: 74%; top: 50%; transform: translateY(-50%) scale(0.2); opacity: 0; } }
+.handover { display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-size: 13px; color: var(--egg-muted); }
+.handover .actor { left: 22%; }
+.handover.go .actor { animation: pass 1.6s ease-in-out forwards; }
+@keyframes pass { to { left: 70%; } }
+.ticker { overflow: hidden; white-space: nowrap; border-radius: 8px; background: rgba(0, 0, 0, 0.35); padding: 8px 0; font-variant-numeric: tabular-nums; }
+.ticker span { display: inline-block; padding-left: 100%; animation: tick 22s linear infinite; font-weight: 600; }
+.ticker b { color: var(--egg-accent); margin-right: 26px; }
+@keyframes tick { to { transform: translateX(-100%); } }
+.cert {
+  background: #fffaf0; color: #3a2c12; border: 3px double #c9a24a; border-radius: 8px; padding: 18px; text-align: center;
+  display: grid; gap: 6px; animation: rise 0.6s cubic-bezier(.2, 1, .3, 1);
+}
+.cert h4 { margin: 0; font-family: var(--font-hand); font-size: 2rem; line-height: 1; }
+.cert p { margin: 0; font-size: 14px; }
+.plates { display: flex; flex-wrap: wrap; gap: 8px; }
+.plates button { font-size: 30px; width: 54px; height: 54px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.08); cursor: pointer; transition: transform 0.2s ease; }
+.plates button:disabled { cursor: default; opacity: 0.55; transform: scale(0.85); }
+.floaty { position: absolute; bottom: 8px; font-size: 22px; pointer-events: none; animation: floatUp 2.2s ease-out forwards; }
+@keyframes floatUp { to { transform: translateY(-120px) rotate(20deg); opacity: 0; } }
+.joke { margin: 0; font-size: 1.05rem; min-height: 3em; }
+.switchrow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--egg-bg); color: var(--egg-ink); }
+.switchrow span { font-weight: 600; }
+.toggle { position: relative; width: 58px; height: 32px; border-radius: 999px; border: 0; background: #555b66; cursor: pointer; flex: none; transition: background 0.3s ease; }
+.toggle::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.3s ease; }
+.toggle[aria-checked="true"] { background: var(--egg-accent); }
+.toggle[aria-checked="true"]::after { transform: translateX(26px); }
+.letter.off .msg, .letter.off .photos, .letter.off .memory { filter: blur(5px) grayscale(1); opacity: 0.35; user-select: none; pointer-events: none; transition: filter 0.8s ease, opacity 0.8s ease; }
+.letter .msg, .letter .photos, .letter .memory { transition: filter 0.8s ease, opacity 0.8s ease; }
 
 /* Slam book */
 .slam { color: var(--ink-night); padding-block: 40px 40px; }
@@ -528,6 +568,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 
   function frame(title) {
     L.innerHTML = "";
+    L.classList.remove("off");
     const x = el("button", "x", "×"); x.type = "button"; x.setAttribute("aria-label", "Close"); x.addEventListener("click", closeDlg);
     const h = el("h2", "to", title); h.id = "dlg-title";
     L.append(x, h);
@@ -561,6 +602,8 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   function showLetter(n, data, token) {
     frame(`Dear ${data.dear || n.name},`);
     const msg = el("p", "msg"); msg.title = "Tap to show the whole note";
+    const isSwitch = data.egg === "switch";
+    if (isSwitch) L.append(friendshipSwitch(n, () => typeOut(msg, data.message || "")));
     L.append(msg);
     if (n.photos) {
       const ph = el("div", `photos n${Math.min(n.photos, 3)}`);
@@ -569,7 +612,8 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
       loadPhotos(n, token, ph);
     }
     if (data.memory) { const m = el("div", "memory"); m.append(el("b", null, "Remember when…"), data.memory); L.append(m); }
-    if (data.egg === "cod") L.append(codChallenge(n));
+    const eggs = { cod: codChallenge, leave: leaveEgg, ride: rideEgg, pack: packEgg, ticker: tickerEgg, promo: promoEgg, ccaf: ccafEgg, plates: platesEgg, mic: micEgg, jokes: jokesEgg };
+    if (eggs[data.egg]) L.append(eggs[data.egg](n, data));
     L.append(el("p", "sign", `— ${F.from}`));
     notify(`opened-${n.slug}`, `💛 ${n.name} opened your note`, `${n.name} just opened the farewell note you wrote for them.`);
     const act = el("div", "letter-actions");
@@ -586,9 +630,196 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     }
     const done = el("button", "btn primary", "Close"); done.type = "button"; done.addEventListener("click", closeDlg);
     btns.append(done); act.append(btns); L.append(act);
-    typeOut(msg, data.message || "");
-    burst();
+    if (isSwitch) { L.classList.add("off"); msg.textContent = (data.message || "").replace(/\S/g, "•").slice(0, 160); }
+    else { typeOut(msg, data.message || ""); burst(); }
     store.set("fw-open-" + n.slug, "1"); refreshCard(n);
+  }
+
+  /* ---- Easter eggs (each one is chosen inside the encrypted note) ---- */
+  function eggBox(tag, title, accent) {
+    const box = el("div", "egg");
+    if (accent) box.style.setProperty("--egg-accent", accent);
+    const status = el("p", "egg-status");
+    box.append(el("span", "egg-tag", tag), el("h3", "egg-title", title));
+    return { box, status };
+  }
+  const later = (ms) => new Promise((r) => setTimeout(r, reduceMotion ? 0 : ms));
+
+  // Naziya: the note stays switched off until she flips it on
+  function friendshipSwitch(n, start) {
+    const row = el("div", "switchrow");
+    const t = el("button", "toggle"); t.type = "button"; t.setAttribute("role", "switch"); t.setAttribute("aria-checked", "false");
+    t.setAttribute("aria-label", "Friendship switch");
+    const label = el("span", null, "Friendship status: OFF. Switch it on to read your note.");
+    t.addEventListener("click", () => {
+      if (t.getAttribute("aria-checked") === "true") return;
+      t.setAttribute("aria-checked", "true");
+      label.textContent = "Friendship status: ON 💡 (let's keep it that way)";
+      L.classList.remove("off"); start(); burst();
+      notify(`switch-${n.slug}`, `💡 ${n.name} switched the friendship ON`, `${n.name} flipped the friendship switch to ON in your farewell note.`);
+    });
+    row.append(t, label);
+    return row;
+  }
+
+  // Tas: instant leave approval
+  function leaveEgg(n) {
+    const { box, status } = eggBox("HR portal (unofficial)", "📝 Last-minute leave request", "#ffc58a");
+    status.textContent = "Request: leave from tomorrow. Notice period: 0 minutes. Reason: \"family\".";
+    const b = el("button", "btn go", "Submit request"); b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Waiting for approval…";
+      await later(900);
+      b.textContent = "Approved ✅";
+      status.textContent = `Approved ✅ (as always). ${n.name}, thank you for every single one of these.`;
+      burst();
+      notify(`leave-${n.slug}`, `📝 ${n.name} approved one last leave request`, `${n.name} tried the leave-request button in your farewell note. Approved, as always.`);
+    });
+    box.append(status, b);
+    return box;
+  }
+
+  // Jeevitha: the Friday ride home
+  function rideEgg(n) {
+    const { box, status } = eggBox("Friday special", "🚗 Book my Friday ride home", "#7fd1c7");
+    const road = el("div", "egg-stage road"); road.append(el("span", "actor", "🚗"));
+    status.textContent = "Pickup: office. Drop: home. Driver: your favourite.";
+    const b = el("button", "btn go", "Book ride"); b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Driver on the way…"; road.classList.add("drive");
+      await later(2700);
+      b.textContent = "Ride ended";
+      status.textContent = `Driver has changed companies. Rides now on request only 😢 (You know the number, ${n.name}. Just call.)`;
+      notify(`ride-${n.slug}`, `🚗 ${n.name} booked one last Friday ride`, `${n.name} tapped "Book my Friday ride" in your farewell note.`);
+    });
+    box.append(road, status, b);
+    return box;
+  }
+
+  // Manasa: packed for the new office
+  function packEgg(n, data) {
+    const who = data.dear || n.name;
+    const { box, status } = eggBox("Before I go", `🧳 Pack ${who} for the new office`, "#ff9ec4");
+    const stage = el("div", "egg-stage pack"); stage.append(el("span", "actor bear", "🧸"), el("span", "actor case", "🧳"));
+    status.textContent = "One very small, very loud colleague. Fits in a bag. Handle with care.";
+    const b = el("button", "btn go", "Pack and take along"); b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true; stage.classList.add("go");
+      await later(1300);
+      b.textContent = "Packed ❤️";
+      status.textContent = `Packed! ${who} is officially coming with me to the new office, like my own little Labubu ❤️`;
+      burst();
+      notify(`pack-${n.slug}`, `🧳 ${n.name} got packed for your new office`, `${n.name} tapped "Pack and take along" in your farewell note.`);
+    });
+    box.append(stage, status, b);
+    return box;
+  }
+
+  // Mashhood: friendship stock ticker
+  function tickerEgg() {
+    const { box, status } = eggBox("Market update", "📈 Today's ticker", "#7cff6b");
+    const t = el("div", "ticker"); const s = el("span");
+    [["FRIENDSHIP", "▲ +∞%"], ["ASHOKAN", "▲ moving to a new exchange"], ["WATCH WISHLIST", "▲ still growing"], ["CREDIT CARD POINTS", "▲ maximised"],
+     ["FOOD SPOT RATINGS", "▲ 5/5"], ["TRAVEL PLANS", "▲ pending approval"], ["MENTORSHIP", "▲ priceless"]]
+      .forEach(([k, v]) => { s.append(k + " "); s.append(el("b", null, v)); });
+    t.append(s);
+    status.textContent = "Analyst rating: Strong Buy. Long-term hold. Never selling.";
+    box.append(t, status);
+    return box;
+  }
+
+  // Hashim: the promotion that should have happened
+  function promoEgg(n) {
+    const { box, status } = eggBox("Sealed envelope", "✉️ A promotion letter, at last", "#ffd37a");
+    const b = el("button", "btn go", "Open promotion letter"); b.type = "button";
+    b.addEventListener("click", () => {
+      b.remove();
+      const c = el("div", "cert");
+      c.append(el("p", null, "CERTIFICATE OF PROMOTION"), el("h4", null, n.name),
+        el("p", null, "is hereby promoted to Friend for Life."),
+        el("p", null, `Approved by: ${F.from} · Effective: forever · No review cycle required`));
+      box.insertBefore(c, status);
+      status.textContent = "You tried hard to get me one. This one's for you.";
+      burst();
+      notify(`promo-${n.slug}`, `✉️ ${n.name} opened the promotion letter`, `${n.name} opened the "Friend for Life" promotion letter in your farewell note.`);
+    });
+    box.append(b, status);
+    return box;
+  }
+
+  // Ayn: handing CCAF back
+  function ccafEgg(n) {
+    const { box, status } = eggBox("Access management", "🔑 Hand back CCAF access", "#b8a4ff");
+    const stage = el("div", "egg-stage handover");
+    stage.append(el("span", null, F.from), el("span", "actor", "🔑"), el("span", null, n.name));
+    status.textContent = "Temporary reliever access: ending. Permanent owner: you.";
+    const b = el("button", "btn go", "Hand over"); b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true; stage.classList.add("go");
+      await later(1700);
+      b.textContent = "Done";
+      status.textContent = "Access returned ✅ CCAF is all yours again. Thank you for always having my back, even on leave.";
+      burst();
+      notify(`ccaf-${n.slug}`, `🔑 ${n.name} took back CCAF access`, `${n.name} tapped "Hand over" on the CCAF Easter egg in your farewell note.`);
+    });
+    box.append(stage, status, b);
+    return box;
+  }
+
+  // Paulo: clear every plate
+  function platesEgg(n) {
+    const { box, status } = eggBox("Team outing", "🍽️ Leftovers detected", "#ffb36b");
+    const row = el("div", "plates");
+    const food = ["🍛", "🍕", "🍝", "🍗", "🍟", "🍰"];
+    let left = food.length;
+    status.textContent = `${left} plates left on the table. You know what to do, ${n.name}.`;
+    food.forEach((f) => {
+      const p = el("button", null, f); p.type = "button"; p.setAttribute("aria-label", "Clear this plate");
+      p.addEventListener("click", () => {
+        p.textContent = "🍽️"; p.disabled = true; left--;
+        status.textContent = left ? `${left} to go…` : "Paulo mode: 100% cleared. Still in shape. How?!";
+        if (!left) { burst(); notify(`plates-${n.slug}`, `🍽️ ${n.name} cleared every plate`, `${n.name} cleared all the leftover plates in your farewell note.`); }
+      });
+      row.append(p);
+    });
+    box.append(row, status);
+    return box;
+  }
+
+  // Irish: one more song
+  function micEgg(n) {
+    const { box, status } = eggBox("Office radio", "🎤 One more song, please", "#ff9ec4");
+    box.style.minHeight = "190px";
+    let songs = 0;
+    status.textContent = "The office has been too quiet. Tap the mic.";
+    const b = el("button", "btn go", "🎤 Sing"); b.type = "button";
+    b.addEventListener("click", () => {
+      songs++;
+      for (let i = 0; i < 6; i++) {
+        const f = el("span", "floaty", ["♪", "♫", "🎶", "♬"][i % 4]);
+        f.style.left = `${10 + Math.random() * 80}%`; f.style.animationDelay = `${i * 0.12}s`;
+        box.append(f); setTimeout(() => f.remove(), 2600);
+      }
+      status.textContent = songs === 1 ? "There it is. I'm going to miss this." : `Encore #${songs}! Keep going 🎶`;
+      if (songs === 1) notify(`mic-${n.slug}`, `🎤 ${n.name} sang one more song`, `${n.name} tapped the mic in your farewell note.`);
+    });
+    box.append(status, b);
+    return box;
+  }
+
+  // Sajjad: jokes, with the last word going to him
+  function jokesEgg(n, data) {
+    const jokes = (data.jokes && data.jokes.length) ? data.jokes : ["I'm not lazy at work. I'm in energy-saving mode."];
+    const { box, status } = eggBox("Comedy hour", "😄 Tell me a joke", "#ffd37a");
+    const j = el("p", "joke", `Your turn to sit back, ${n.name}. Tap for a joke.`);
+    let i = 0;
+    const b = el("button", "btn go", "Tell me a joke"); b.type = "button";
+    b.addEventListener("click", () => {
+      if (i < jokes.length) { j.textContent = jokes[i++]; b.textContent = i < jokes.length ? "Another one" : "One more?"; status.textContent = `${i} of ${jokes.length}`; }
+      else { j.textContent = "That's all I've got. Honestly, yours were always better. Keep the team laughing for me 😄"; b.remove(); status.textContent = ""; notify(`jokes-${n.slug}`, `😄 ${n.name} heard all your jokes`, `${n.name} went through every joke in your farewell note.`); }
+    });
+    box.append(j, b, status);
+    return box;
   }
 
   async function openNote(n) {
