@@ -469,7 +469,8 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   const sessionKeys = {};
   try { Object.keys(localStorage).filter((k) => k.startsWith("fw-key-")).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
   const keyOf = (slug) => (REVIEW && REVIEW[slug]) || sessionKeys[slug];
-  const isOpened = (slug) => store.get("fw-open-" + slug) === "1";
+  // No per-device "Opened" history: it hinted at other people's notes on shared devices
+  try { Object.keys(localStorage).filter((k) => k.startsWith("fw-open-")).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
 
   /* Personal link: #slug.code -> remember the key, then clean the address bar */
   let mineSlug = null;
@@ -553,7 +554,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   /* Cards */
   const hue = (s) => [...s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   const initials = (n) => n.replace(/[^\p{L}\s]/gu, "").trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "♥";
-  function chipText(n) { return n.slug === mineSlug ? "Your note" : REVIEW ? "Review" : isOpened(n.slug) ? "Opened" : "Sealed"; }
+  function chipText(n) { return n.slug === mineSlug ? "Your note" : REVIEW ? "Review" : "Sealed"; }
   if (REVIEW) {
     const b = $("#mine-banner");
     b.append(el("p", null, "Review mode: every note is unsealed on this computer only. Your colleagues still need their codes."));
@@ -561,7 +562,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   }
   const cards = new Map();
   F.notes.forEach((n, i) => {
-    const c = el("button", "card reveal" + (n.slug === mineSlug ? " mine" : "") + (isOpened(n.slug) ? " opened" : ""));
+    const c = el("button", "card reveal" + (n.slug === mineSlug ? " mine" : ""));
     c.type = "button";
     c.style.transitionDelay = `${(i % 4) * 140}ms`;
     c.setAttribute("aria-label", `Open the note for ${n.name}`);
@@ -577,7 +578,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   });
   function refreshCard(n) {
     const r = cards.get(n.slug); if (!r) return;
-    r.c.classList.toggle("opened", isOpened(n.slug)); r.chip.textContent = chipText(n);
+    r.chip.textContent = chipText(n);
   }
 
   /* Slow fade-in on scroll */
@@ -679,7 +680,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     btns.append(done); act.append(btns); L.append(act);
     if (isSwitch) { L.classList.add("off"); msg.textContent = (data.message || "").replace(/\S/g, "•").slice(0, 160); }
     else { typeOut(msg, data.message || ""); burst(); }
-    store.set("fw-open-" + n.slug, "1"); refreshCard(n);
+    refreshCard(n);
   }
 
   /* ---- Easter eggs (each one is chosen inside the encrypted note) ---- */
