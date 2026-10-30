@@ -464,7 +464,11 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
   const REVIEW = window.REVIEW_KEYS || null;
-  const keyOf = (slug) => (REVIEW && REVIEW[slug]) || store.get("fw-key-" + slug);
+  // Codes are kept only while this page is open, never saved on the device, so a shared phone or
+  // computer can't open someone else's note later. Also forget codes saved by the earlier version.
+  const sessionKeys = {};
+  try { Object.keys(localStorage).filter((k) => k.startsWith("fw-key-")).forEach((k) => localStorage.removeItem(k)); } catch (e) {}
+  const keyOf = (slug) => (REVIEW && REVIEW[slug]) || sessionKeys[slug];
   const isOpened = (slug) => store.get("fw-open-" + slug) === "1";
 
   /* Personal link: #slug.code -> remember the key, then clean the address bar */
@@ -474,12 +478,11 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
   if (dot > 0) {
     const slug = hash.slice(0, dot), token = hash.slice(dot + 1);
     if (F.notes.some((n) => n.slug === slug) && token) {
-      store.set("fw-key-" + slug, token);
+      sessionKeys[slug] = token;
       mineSlug = slug;
       history.replaceState(null, "", location.pathname + location.search);
     }
   }
-  if (!mineSlug && !REVIEW) mineSlug = (F.notes.find((n) => keyOf(n.slug)) || {}).slug || null;
   const mine = F.notes.find((n) => n.slug === mineSlug);
 
   /* Crypto */
@@ -636,7 +639,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
       e.preventDefault();
       const code = inp.value.trim(); if (!code) { err.textContent = "Type your code first."; return; }
       go.disabled = true; go.textContent = "Opening…"; err.textContent = "";
-      try { const data = await decryptNote(n, code); store.set("fw-key-" + n.slug, normalize(code)); showLetter(n, data, code); }
+      try { const data = await decryptNote(n, code); sessionKeys[n.slug] = normalize(code); showLetter(n, data, code); }
       catch (x) { err.textContent = "That code doesn't open this note. Check it and try again."; go.disabled = false; go.textContent = "Open note"; }
     });
     L.append(f);
@@ -870,7 +873,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     const k = keyOf(n.slug);
     if (!k) return showUnlock(n);
     try { showLetter(n, await decryptNote(n, k), k); }
-    catch (e) { store.del("fw-key-" + n.slug); showUnlock(n, "The saved code didn't work. Enter the code from your link."); }
+    catch (e) { delete sessionKeys[n.slug]; showUnlock(n, "That code didn't work. Enter the code from your link."); }
   }
 
   /* Email Ashokan once per device when something happens (uses the slam book's Web3Forms key) */
