@@ -380,16 +380,6 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 .chat-msg.me { justify-self: end; background: #6264a7; color: #fff; border-top-right-radius: 4px; }
 .chat-typing { justify-self: end; font-size: 13px; color: var(--egg-muted); font-style: italic; }
 
-/* Dance break */
-dialog[open] .letter.dancing { animation: wiggle 0.35s ease-in-out 10; }
-@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-1.6deg) translateY(-3px); } 75% { transform: rotate(1.6deg) translateY(-3px); } }
-.dancer { position: fixed; z-index: 61; pointer-events: none; font-size: 34px; animation: bounceAway 3.4s ease-in-out forwards; }
-@keyframes bounceAway {
-  0% { opacity: 0; transform: translateY(30px) scale(0.6); } 10% { opacity: 1; transform: translateY(0) scale(1); }
-  30% { transform: translateY(-26px) rotate(-12deg); } 50% { transform: translateY(0) rotate(12deg); } 70% { transform: translateY(-26px) rotate(-12deg); }
-  90% { opacity: 1; transform: translateY(0) rotate(0); } 100% { opacity: 0; transform: translateY(20px); }
-}
-
 /* Food date voucher */
 .voucher {
   position: relative; display: grid; gap: 6px; padding: 18px 22px; border-radius: 12px; color: #3b1a0a;
@@ -760,7 +750,7 @@ dialog[open] .letter.dancing { animation: wiggle 0.35s ease-in-out 10; }
     }
     if (data.memory) { const m = el("div", "memory"); m.append(el("b", null, "Remember when…"), data.memory); L.append(m); }
     const eggs = { cod: codChallenge, leave: leaveEgg, ride: rideEgg, pack: packEgg, ticker: tickerEgg, promo: promoEgg, ccaf: ccafEgg, plates: platesEgg, mic: micEgg, jokes: jokesEgg,
-      chat: chatEgg, dance: danceEgg, voucher: voucherEgg };
+      chat: chatEgg, voucher: voucherEgg };
     [data.egg, ...(data.extras || [])].forEach((k) => { if (eggs[k]) L.append(eggs[k](n, data)); });
     if (data.song && /^[\w-]{11}$/.test(data.song.youtube || "")) L.append(songCard(n, data.song));
     L.append(el("p", "sign", `— ${F.from}`));
@@ -1002,34 +992,6 @@ dialog[open] .letter.dancing { animation: wiggle 0.35s ease-in-out 10; }
       notify(`chat-${n.slug}`, `💬 ${n.name} opened your "where are you" chat`, `${n.name} opened the Teams chat surprise in your farewell note.`);
     });
     box.append(chat, status, b);
-    return box;
-  }
-
-  // Manasa: a dance break for the letter itself
-  function danceEgg(n) {
-    const { box, status } = eggBox("Emergency", "💃 Dance break", "#ff9ec4");
-    status.textContent = "For the best dance moves in the office. Press only if the mood is right.";
-    const b = el("button", "btn go", "Start dance break"); b.type = "button";
-    b.addEventListener("click", () => {
-      b.disabled = true;
-      if (!reduceMotion) {
-        L.classList.remove("dancing"); void L.offsetWidth; L.classList.add("dancing");
-        const moves = ["💃", "🕺", "🪩", "🎶", "✨", "💃", "🎵", "🕺"];
-        moves.forEach((e, k) => {
-          const d = el("span", "dancer", e);
-          d.style.left = `${6 + k * (88 / moves.length) + Math.random() * 4}vw`;
-          d.style.bottom = `${8 + Math.random() * 20}vh`;
-          d.style.animationDelay = `${k * 90}ms`;
-          document.body.append(d);
-          setTimeout(() => d.remove(), 3700 + k * 90);
-        });
-        setTimeout(() => L.classList.remove("dancing"), 3600);
-      }
-      status.textContent = "Nobody does it like you. Keep dancing in the new office too 💃";
-      setTimeout(() => { b.disabled = false; b.textContent = "One more time"; }, reduceMotion ? 0 : 3600);
-      notify(`dance-${n.slug}`, `💃 ${n.name} started a dance break`, `${n.name} pressed the dance break button in your farewell note.`);
-    });
-    box.append(status, b);
     return box;
   }
 
