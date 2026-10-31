@@ -392,6 +392,27 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
 .voucher p { margin: 0; font-size: 14px; }
 .voucher .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
 
+/* Job posting */
+.posting { position: relative; display: grid; gap: 6px; padding: 16px 18px; border-radius: 10px; background: #fff; color: #1d2433; font-size: 14px; }
+.posting h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
+.posting p { margin: 0; }
+.posting p b { color: #6b7385; font-weight: 600; }
+.stamp {
+  position: absolute; right: 14px; bottom: 14px; padding: 4px 12px; border: 3px solid #c0392b; border-radius: 6px; color: #c0392b;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; letter-spacing: 0.08em; transform: rotate(-12deg);
+  animation: stampIn 0.35s cubic-bezier(.3, 1.6, .5, 1);
+}
+@keyframes stampIn { from { opacity: 0; transform: rotate(-12deg) scale(2.2); } to { opacity: 1; transform: rotate(-12deg) scale(1); } }
+
+/* Reserved seat */
+.table { display: flex; align-items: flex-end; justify-content: center; gap: 18px; padding: 16px 10px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); font-size: 40px; line-height: 1; }
+.reserved {
+  font: inherit; font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 10px 12px; border: 0; border-radius: 6px 6px 2px 2px; background: #fff; color: #1d2433; cursor: pointer;
+  box-shadow: 0 6px 0 -2px #c9ced8; animation: beat 1.6s ease-in-out infinite;
+}
+.reserved.done { animation: none; background: var(--egg-accent); }
+
 .float-heart { position: fixed; z-index: 61; pointer-events: none; font-size: 26px; animation: floatUp 1.8s ease-out forwards; }
 @keyframes floatUp { from { opacity: 1; transform: translate(0, 0) scale(0.8); } to { opacity: 0; transform: translate(var(--dx, 0), -220px) scale(1.4); } }
 
@@ -750,7 +771,7 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
     }
     if (data.memory) { const m = el("div", "memory"); m.append(el("b", null, "Remember when…"), data.memory); L.append(m); }
     const eggs = { cod: codChallenge, leave: leaveEgg, ride: rideEgg, pack: packEgg, ticker: tickerEgg, promo: promoEgg, ccaf: ccafEgg, plates: platesEgg, mic: micEgg, jokes: jokesEgg,
-      chat: chatEgg, voucher: voucherEgg };
+      chat: chatEgg, voucher: voucherEgg, ad: adEgg, seat: seatEgg };
     [data.egg, ...(data.extras || [])].forEach((k) => { if (eggs[k]) L.append(eggs[k](n, data)); });
     if (data.song && /^[\w-]{11}$/.test(data.song.youtube || "")) L.append(songCard(n, data.song));
     L.append(el("p", "sign", `— ${F.from}`));
@@ -1012,6 +1033,46 @@ dialog[open] .letter { animation: rise 0.6s cubic-bezier(.2, 1, .3, 1); }
       notify(`voucher-${n.slug}`, `🎟️ ${n.name} opened the food date voucher`, `${n.name} opened the food date voucher in your farewell note. Time to plan one!`);
     });
     box.append(b, status);
+    return box;
+  }
+
+  // Jeevitha: a job posting for the lunch partner role
+  function adEgg(n, data) {
+    const a = data.ad || {};
+    const { box, status } = eggBox(a.tag || "Now hiring", a.title || "📢 Vacancy", "#7fd1c7");
+    const post = el("div", "posting");
+    post.append(el("h4", null, a.role || "Lunch partner"));
+    (a.lines || []).forEach(([k, v]) => { const p = el("p"); p.append(el("b", null, `${k}: `), v); post.append(p); });
+    const b = el("button", "btn go", a.button || "Apply now"); b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "Reviewing application…";
+      await later(1000);
+      b.remove();
+      post.append(el("span", "stamp", a.stamp || "FILLED"));
+      status.textContent = a.result || "";
+      burst();
+      notify(`ad-${n.slug}`, `📢 ${n.name} tried to apply for the lunch partner job`, `${n.name} opened the lunch partner job posting in your farewell note.`);
+    });
+    box.append(post, status, b);
+    return box;
+  }
+
+  // Jeevitha: the lunch table seat that stays reserved
+  function seatEgg(n, data) {
+    const s = data.seat || {};
+    const { box, status } = eggBox(s.tag || "Lunch table", s.title || "🪑 Table for two", "#ffc58a");
+    const table = el("div", "table");
+    const card = el("button", "reserved", s.card || "Reserved"); card.type = "button";
+    table.append(el("span", null, "🍱"), card, el("span", null, "🪑"));
+    status.textContent = s.hint || "Tap the card on the table.";
+    card.addEventListener("click", () => {
+      if (card.classList.contains("done")) return;
+      card.classList.add("done");
+      status.textContent = s.reveal || "";
+      burst();
+      notify(`seat-${n.slug}`, `🪑 ${n.name} found the reserved seat`, `${n.name} tapped the reserved lunch seat in your farewell note.`);
+    });
+    box.append(table, status);
     return box;
   }
 
